@@ -307,38 +307,22 @@ def stars_counter(data):
     return total_stars
 
 
-def svg_overwrite(filename, age_data, commit_data, star_data, repo_data, contrib_data, follower_data, loc_data):
+def svg_overwrite(filename, data_map):
     """
-    Analisa arquivos SVG e atualiza elementos com base em seu ID, de forma segura.
+    Analisa um arquivo SVG e atualiza o conteúdo de qualquer tspan que
+    tenha um ID presente no dicionário data_map.
     """
     svg = minidom.parse(filename)
-
-    # Dicionário mapeando os IDs do seu SVG para os dados corretos
-    id_to_data = {
-        "age_data": age_data,
-        "repo_data": repo_data,
-        "contrib_data": contrib_data,
-        "commit_data": commit_data,
-        "star_data": star_data,
-        "follower_data": follower_data,
-        "loc_data": loc_data[2],
-        "loc_add": loc_data[0],
-        "loc_del": loc_data[1]
-    }
-
-    # Itera sobre todos os elementos <tspan> do arquivo
+    
     for tspan in svg.getElementsByTagName('tspan'):
-        # Pega o ID do elemento atual
         tspan_id = tspan.getAttribute('id')
-        
-        # Se o ID do elemento estiver no nosso dicionário, atualiza o valor
-        if tspan_id in id_to_data:
-            # Garante que há um texto dentro do tspan para ser modificado
+        # Se o ID do tspan estiver no nosso mapa, atualiza seu conteúdo
+        if tspan_id in data_map:
+            # Garante que há um nó de texto para modificar
             if tspan.firstChild and tspan.firstChild.nodeType == tspan.TEXT_NODE:
-                tspan.firstChild.data = id_to_data[tspan_id]
-            else:
-                # Se o tspan estiver vazio, cria um novo nó de texto com o dado
-                tspan.appendChild(svg.createTextNode(str(id_to_data[tspan_id])))
+                tspan.firstChild.data = data_map[tspan_id]
+            else: # Se o tspan estiver vazio, cria um novo nó de texto
+                tspan.appendChild(svg.createTextNode(str(data_map[tspan_id])))
 
     # Sobrescreve o arquivo SVG com as alterações
     with open(filename, mode='w', encoding='utf-8') as f:
@@ -436,46 +420,78 @@ def formatter(query_type, difference, funct_return=False, whitespace=0):
 if __name__ == '__main__':
     """
     Andrew Grant (Andrew6rant), 2022-2024
+    Adaptado por PeeeDrummm com ajuda do Gemini
     """
+    # --- LARGURA DAS COLUNAS (AJUSTE AQUI SE PRECISAR) ---
+    # Largura total = (comprimento dos pontos + comprimento do número)
+    WIDTH_REPOS = 10       # Ex: 8 pontos + 2 para o número
+    WIDTH_STARS = 15       # Ex: 11 pontos + 4 para o número
+    WIDTH_COMMITS = 28     # Ex: 21 pontos + 7 para o número
+    WIDTH_FOLLOWERS = 10   # Ex: 7 pontos + 3 para o número
+    WIDTH_LOC_TOTAL = 11   # Ex: 4 pontos + 7 para o número
+    
     print('Calculation times:')
-    # define global variable for owner ID and calculate user's creation date
-    # e.g {'id': 'MDQ6VXNlcjU3MzMxMTM0'} and 2019-11-03T21:15:07Z for username 'Andrew6rant'
     user_data, user_time = perf_counter(user_getter, USER_NAME)
     OWNER_ID, acc_date = user_data
     formatter('account data', user_time)
+    
     age_data, age_time = perf_counter(daily_readme, datetime.datetime(2020, 8, 25))
     formatter('age calculation', age_time)
+    
     total_loc, loc_time = perf_counter(loc_query, ['OWNER', 'COLLABORATOR', 'ORGANIZATION_MEMBER'], 7)
     formatter('LOC (cached)', loc_time) if total_loc[-1] else formatter('LOC (no cache)', loc_time)
+    
     commit_data, commit_time = perf_counter(commit_counter, 7)
     star_data, star_time = perf_counter(graph_repos_stars, 'stars', ['OWNER'])
     repo_data, repo_time = perf_counter(graph_repos_stars, 'repos', ['OWNER'])
     contrib_data, contrib_time = perf_counter(graph_repos_stars, 'repos', ['OWNER', 'COLLABORATOR', 'ORGANIZATION_MEMBER'])
     follower_data, follower_time = perf_counter(follower_getter, USER_NAME)
 
-    # several repositories that I've contributed to have since been deleted.
-    if OWNER_ID == {'id': 'MDQ6VXNlcjU3MzMxMTM0'}: # only calculate for user PeDrum
+    if OWNER_ID == {'id': 'MDQ6VXNlcjU3MzMxMTM0'}:
         archived_data = add_archive()
         for index in range(len(total_loc)-1):
             total_loc[index] += archived_data[index]
         contrib_data += archived_data[-1]
         commit_data += int(archived_data[-2])
 
-    commit_data = formatter('commit counter', commit_time, commit_data, 7)
-    star_data = formatter('star counter', star_time, star_data)
-    repo_data = formatter('my repositories', repo_time, repo_data, 2)
-    contrib_data = formatter('contributed repos', contrib_time, contrib_data, 2)
-    follower_data = formatter('follower counter', follower_time, follower_data, 4)
+    formatter('commit counter', commit_time)
+    formatter('star counter', star_time)
+    formatter('my repositories', repo_time)
+    formatter('contributed repos', contrib_time)
+    formatter('follower counter', follower_time)
 
-    for index in range(len(total_loc)-1): total_loc[index] = '{:,}'.format(total_loc[index]) # format added, deleted, and total LOC
+    # --- PREPARA O DICIONÁRIO DE DADOS PARA O SVG ---
+    data_map = {
+        'age_data': age_data,
+        'contrib_data': contrib_data,
+        
+        # Repos
+        'repo_data_dots': '.' * (WIDTH_REPOS - len(str(repo_data))),
+        'repo_data': f"{repo_data} ",
+        
+        # Stars
+        'star_data_dots': '.' * (WIDTH_STARS - len(str(star_data))),
+        'star_data': star_data,
+        
+        # Commits
+        'commit_data_dots': '.' * (WIDTH_COMMITS - len(str(commit_data))),
+        'commit_data': commit_data,
+        
+        # Followers
+        'follower_data_dots': '.' * (WIDTH_FOLLOWERS - len(str(follower_data))),
+        'follower_data': f"{follower_data}  ",
+        
+        # Lines of Code
+        'loc_data_dots': '.' * (WIDTH_LOC_TOTAL - len(f"{total_loc[2]:,}")),
+        'loc_data': f"{total_loc[2]:,}",
+        'loc_add': f" {total_loc[0]:,}",
+        'loc_del': f" {total_loc[1]:,}",
+    }
 
-    svg_overwrite('dark_mode.svg', age_data, commit_data, star_data, repo_data, contrib_data, follower_data, total_loc[:-1])
-    svg_overwrite('light_mode.svg', age_data, commit_data, star_data, repo_data, contrib_data, follower_data, total_loc[:-1])
+    # Gera os arquivos SVG
+    svg_overwrite('dark_mode.svg', data_map)
+    svg_overwrite('light_mode.svg', data_map)
 
-    # move cursor to override 'Calculation times:' with 'Total function time:' and the total function time, then move cursor back
-    print('\033[F\033[F\033[F\033[F\033[F\033[F\033[F\033[F',
-        '{:<21}'.format('Total function time:'), '{:>11}'.format('%.4f' % (user_time + age_time + loc_time + commit_time + star_time + repo_time + contrib_time)),
-        ' s \033[E\033[E\033[E\033[E\033[E\033[E\033[E\033[E', sep='')
-
-    print('Total GitHub GraphQL API calls:', '{:>3}'.format(sum(QUERY_COUNT.values())))
-    for funct_name, count in QUERY_COUNT.items(): print('{:<28}'.format('   ' + funct_name + ':'), '{:>6}'.format(count))
+    print('\nTotal GitHub GraphQL API calls:', '{:>3}'.format(sum(QUERY_COUNT.values())))
+    for funct_name, count in QUERY_COUNT.items():
+        print('{:<28}'.format('   ' + funct_name + ':'), '{:>6}'.format(count))
