@@ -318,21 +318,40 @@ def stars_counter(data):
 
 def svg_overwrite(filename, age_data, commit_data, star_data, repo_data, contrib_data, follower_data, loc_data):
     """
-    Parse SVG files and update elements with my age, commits, stars, repositories, and lines written
+    Analisa arquivos SVG e atualiza elementos com base em seu ID, de forma segura.
     """
     svg = minidom.parse(filename)
-    f = open(filename, mode='w', encoding='utf-8')
-    tspan = svg.getElementsByTagName('tspan')
-    tspan[31].firstChild.data = age_data
-    tspan[66].firstChild.data = repo_data
-    tspan[68].firstChild.data = commit_data
-    tspan[70].firstChild.data = star_data
-    tspan[72].firstChild.data = follower_data
-    tspan[74].firstChild.data = loc_data[2]
-    tspan[75].firstChild.data = loc_data[0] + '++'
-    tspan[76].firstChild.data = loc_data[1] + '--'
-    f.write(svg.toxml('utf-8').decode('utf-8'))
-    f.close()
+
+    # Dicionário mapeando os IDs do seu SVG para os dados corretos
+    id_to_data = {
+        "age_data": age_data,
+        "repo_data": repo_data,
+        "contrib_data": contrib_data,
+        "commit_data": commit_data,
+        "star_data": star_data,
+        "follower_data": follower_data,
+        "loc_data": loc_data[2],
+        "loc_add": loc_data[0],
+        "loc_del": loc_data[1]
+    }
+
+    # Itera sobre todos os elementos <tspan> do arquivo
+    for tspan in svg.getElementsByTagName('tspan'):
+        # Pega o ID do elemento atual
+        tspan_id = tspan.getAttribute('id')
+        
+        # Se o ID do elemento estiver no nosso dicionário, atualiza o valor
+        if tspan_id in id_to_data:
+            # Garante que há um texto dentro do tspan para ser modificado
+            if tspan.firstChild and tspan.firstChild.nodeType == tspan.TEXT_NODE:
+                tspan.firstChild.data = id_to_data[tspan_id]
+            else:
+                # Se o tspan estiver vazio, cria um novo nó de texto com o dado
+                tspan.appendChild(svg.createTextNode(str(id_to_data[tspan_id])))
+
+    # Sobrescreve o arquivo SVG com as alterações
+    with open(filename, mode='w', encoding='utf-8') as f:
+        f.write(svg.toxml('utf-8').decode('utf-8'))
 
 
 def commit_counter(comment_size):
