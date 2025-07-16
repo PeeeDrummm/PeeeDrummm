@@ -17,28 +17,19 @@ QUERY_COUNT = {'user_getter': 0, 'follower_getter': 0, 'graph_repos_stars': 0, '
 
 def daily_readme(birthday):
     """
-    Returns the length of time since I was born
-    e.g. 'XX years, XX months, XX days'
+    Retorna o tempo de vida no formato 'XX anos, XX meses, XX dias'.
     """
     diff = relativedelta.relativedelta(datetime.datetime.today(), birthday)
-    return '{} {}, {} {}, {} {}{}'.format(
-        diff.years, 'year' + format_plural(diff.years), 
-        diff.months, 'month' + format_plural(diff.months), 
-        diff.days, 'day' + format_plural(diff.days),
-        ' 🎂' if (diff.months == 0 and diff.days == 0) else '')
 
+    # Monta as strings em português, tratando o plural corretamente
+    anos_str = f"{diff.years} {'ano' if diff.years == 1 else 'anos'}"
+    meses_str = f"{diff.months} {'mês' if diff.months == 1 else 'meses'}"
+    dias_str = f"{diff.days} {'dia' if diff.days == 1 else 'dias'}"
+    
+    # Adiciona o emoji de bolo se for aniversário
+    emoji_aniversario = ' 🎂' if (diff.months == 0 and diff.days == 0) else ''
 
-def format_plural(unit):
-    """
-    Returns a properly formatted number
-    e.g.
-    'day' + format_plural(diff.days) == 5
-    >>> '5 days'
-    'day' + format_plural(diff.days) == 1
-    >>> '1 day'
-    """
-    return 's' if unit != 1 else ''
-
+    return f"{anos_str}, {meses_str}, {dias_str}{emoji_aniversario}"
 
 def simple_request(func_name, query, variables):
     """
