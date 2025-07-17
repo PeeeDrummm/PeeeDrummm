@@ -420,15 +420,15 @@ def formatter(query_type, difference, funct_return=False, whitespace=0):
 if __name__ == '__main__':
     """
     Andrew Grant (Andrew6rant), 2022-2024
-    Adaptado por PeeeDrummm com ajuda do Gemini
+    Adaptado por PeeeDrummm
     """
     # --- LARGURA DAS COLUNAS (AJUSTE AQUI SE PRECISAR) ---
     # Largura total = (comprimento dos pontos + comprimento do número)
-    WIDTH_REPOS = 10       # Ex: 8 pontos + 2 para o número
-    WIDTH_STARS = 15       # Ex: 11 pontos + 4 para o número
-    WIDTH_COMMITS = 28     # Ex: 21 pontos + 7 para o número
-    WIDTH_FOLLOWERS = 10   # Ex: 7 pontos + 3 para o número
-    WIDTH_LOC_TOTAL = 11   # Ex: 4 pontos + 7 para o número
+    WIDTH_REPOS = 25       # Ex: 8 pontos + 2 para o número
+    WIDTH_STARS = 14       # Ex: 11 pontos + 4 para o número
+    WIDTH_COMMITS = 25     # Ex: 21 pontos + 7 para o número
+    WIDTH_FOLLOWERS = 14   # Ex: 7 pontos + 3 para o número
+    WIDTH_LOC_TOTAL = 25   # Ex: 4 pontos + 7 para o número
     
     print('Calculation times:')
     user_data, user_time = perf_counter(user_getter, USER_NAME)
